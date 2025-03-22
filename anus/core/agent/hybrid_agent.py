@@ -36,13 +36,30 @@ class HybridAgent(ToolAgent):
         super().__init__(name=name, max_iterations=max_iterations, tools=tools, **kwargs)
         self.mode = "auto"
         
-        # Specialized agents for multi-agent mode
+        # Initialize dictionary to hold specialized agents for multi-agent mode.
+        # Initially, no specialized agents are created.
         self.specialized_agents = {
-            "researcher": ToolAgent(name="researcher", tools=tools),
-            "planner": ToolAgent(name="planner", tools=tools),
-            "executor": ToolAgent(name="executor", tools=tools),
-            "critic": ToolAgent(name="critic", tools=tools)
+            "researcher": None,
+            "planner": None,
+            "executor": None,
+            "critic": None
         }
+    
+    def add_specialized_agent(self, role: str, config: dict) -> None:
+        """
+        Создает и регистрирует специализированного агента для заданной роли.
+        
+        Args:
+            role: Роль агента (например, "researcher", "planner", "executor", "critic").
+            config: Конфигурация агента для данной роли.
+        
+        Данный метод создает нового агента (на базе ToolAgent) с указанными настройками и сохраняет его в словаре specialized_agents.
+        """
+        from anus.core.agent.tool_agent import ToolAgent  # Импортируем класс инструментарного агента
+        agent_name = config.get("name", f"{role}-agent")
+        specialized_agent = ToolAgent(name=agent_name, **config)
+        self.specialized_agents[role] = specialized_agent
+        logging.info(f"Added specialized agent for role '{role}' with name '{agent_name}'")
     
     def _assess_complexity(self, task: str) -> float:
         """
@@ -58,32 +75,28 @@ class HybridAgent(ToolAgent):
         
         # Check for multiple operations
         operations = [
-            (r'(calculate|compute|evaluate)', 1.0),  # Basic calculations
-            (r'(search|find|look up)', 1.0),  # Search operations
-            (r'(count|process|analyze|transform)\s+text', 1.0),  # Text operations
-            (r'run\s+code|execute', 1.5),  # Code execution
-            (r'compare|contrast|evaluate', 2.0),  # Analysis operations
-            (r'optimize|improve|enhance', 2.5),  # Optimization tasks
-            (r'and|then|after|before', 1.0),  # Task chaining
-            (r'if|when|unless|otherwise', 1.5),  # Conditional operations
-            (r'all|every|each', 1.0),  # Comprehensive operations
-            (r'most|best|optimal', 1.5)  # Decision making
+            (r'(calculate|compute|evaluate)', 1.0),
+            (r'(search|find|look up)', 1.0),
+            (r'(count|process|analyze|transform)\s+text', 1.0),
+            (r'run\s+code|execute', 1.5),
+            (r'compare|contrast|evaluate', 2.0),
+            (r'optimize|improve|enhance', 2.5),
+            (r'and|then|after|before', 1.0),
+            (r'if|when|unless|otherwise', 1.5),
+            (r'all|every|each', 1.0),
+            (r'most|best|optimal', 1.5)
         ]
         
-        # Add complexity for each operation found
         for pattern, score in operations:
             matches = re.findall(pattern, task.lower())
             complexity += score * len(matches)
         
-        # Add complexity for length of task description
         words = task.split()
-        complexity += len(words) * 0.1  # 0.1 points per word
+        complexity += len(words) * 0.1
         
-        # Add complexity for special characters (potential complex expressions)
         special_chars = sum(1 for c in task if not c.isalnum() and not c.isspace())
         complexity += special_chars * 0.2
         
-        # Add complexity for multiple tools needed
         tool_keywords = {
             'calculator': ['calculate', 'compute', 'evaluate', 'math'],
             'search': ['search', 'find', 'look up', 'query'],
@@ -99,7 +112,6 @@ class HybridAgent(ToolAgent):
             
         complexity += tools_needed * 1.5
         
-        # Cap the complexity at 10
         return min(10.0, complexity)
     
     def execute(self, task: str, **kwargs) -> Dict[str, Any]:
@@ -115,7 +127,6 @@ class HybridAgent(ToolAgent):
         """
         complexity = self._assess_complexity(task)
         
-        # Decide on mode based on complexity
         if complexity < 3.0:
             logging.info(f"Task complexity ({complexity:.1f}) below threshold (3.0). ANUS staying tight in single-agent mode.")
             logging.info("This task is so simple even a constipated ANUS could handle it.")
@@ -139,12 +150,9 @@ class HybridAgent(ToolAgent):
         logging.info("ANUS expanding to accommodate multiple agents")
         logging.info("Task decomposed into subtasks for optimal ANUS performance")
         
-        # For simple calculator tasks, use direct execution
+        # Пример для простых математических операций
         if task.lower().startswith("calculate"):
-            # Use the ToolAgent's _decide_action method to determine the action
             action_name, action_input = self._decide_action({"task": task})
-            
-            # If it's a calculator action, execute it directly
             if action_name == "calculator" and "expression" in action_input:
                 result = self._execute_action(action_name, action_input)
                 if result.get("status") == "success" and "result" in result:
@@ -155,41 +163,45 @@ class HybridAgent(ToolAgent):
                         "mode": "direct"
                     }
         
-        # For complex tasks, use multi-agent approach
         results = {}
         final_result = None
         
-        # Researcher analyzes the task and gathers information
-        researcher_result = self.specialized_agents["researcher"].execute(
-            f"Analyze and gather information for: {task}"
-        )
-        results["researcher"] = researcher_result
+        # Если специализированные агенты ещё не созданы, их можно создать здесь
+        standard_roles = ["researcher", "planner", "executor", "critic"]
+        for role in standard_roles:
+            if not self.specialized_agents.get(role):
+                # Пример: используем конфигурацию по умолчанию для каждого агента
+                default_config = {"name": f"{role}-agent", "tools": kwargs.get("tools", [])}
+                self.add_specialized_agent(role, default_config)
         
-        # Planner creates a strategy based on research
-        planner_result = self.specialized_agents["planner"].execute(
-            f"Plan execution strategy for: {task}\nBased on research: {researcher_result}"
-        )
-        results["planner"] = planner_result
+        # Выполнение задачи специализированными агентами
+        if self.specialized_agents.get("researcher"):
+            results["researcher"] = self.specialized_agents["researcher"].execute(
+                f"Analyze and gather information for: {task}"
+            )
         
-        # Executor carries out the plan
-        executor_result = self.specialized_agents["executor"].execute(
-            f"Execute plan for: {task}\nFollowing strategy: {planner_result}"
-        )
-        results["executor"] = executor_result
-        final_result = executor_result  # Use executor's result as the primary result
+        if self.specialized_agents.get("planner"):
+            results["planner"] = self.specialized_agents["planner"].execute(
+                f"Plan execution strategy for: {task}\nBased on research: {results.get('researcher')}"
+            )
         
-        # Critic evaluates the results
-        critic_result = self.specialized_agents["critic"].execute(
-            f"Evaluate results for: {task}\nAnalyzing output: {executor_result}"
-        )
-        results["critic"] = critic_result
+        if self.specialized_agents.get("executor"):
+            results["executor"] = self.specialized_agents["executor"].execute(
+                f"Execute plan for: {task}\nFollowing strategy: {results.get('planner')}"
+            )
+            final_result = results["executor"]
+        
+        if self.specialized_agents.get("critic"):
+            results["critic"] = self.specialized_agents["critic"].execute(
+                f"Evaluate results for: {task}\nAnalyzing output: {results.get('executor')}"
+            )
         
         logging.info("All agents have finished their tasks. ANUS is aggregating results...")
         logging.info("ANUS has successfully completed multi-agent processing")
         
         return {
             "task": task,
-            "answer": final_result.get("answer", str(final_result)),
+            "answer": final_result.get("answer", str(final_result)) if final_result else "No answer",
             "agent_results": results,
             "mode": "multi"
-        } 
+        }
