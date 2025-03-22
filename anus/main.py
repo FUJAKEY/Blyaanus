@@ -13,16 +13,15 @@ async def main():
     
     args = parser.parse_args()
     
-    # Инициализируем CLI
+    # Initialize CLI and display welcome message
     cli = CLI(verbose=args.verbose)
     cli.display_welcome()
     
-    # Создаем оркестратор агентов
+    # Create the orchestrator with the provided configuration
     orchestrator = AgentOrchestrator(config_path=args.config)
     
-    # Если передана задача, выполняем её; иначе – запускаем интерактивный режим
+    # Execute task if provided, otherwise start interactive mode
     if args.task:
-        # Если метод execute_task является асинхронным, обязательно используйте await.
         result = await orchestrator.execute_task(args.task, mode=args.mode)
         cli.display_result(result)
     else:
