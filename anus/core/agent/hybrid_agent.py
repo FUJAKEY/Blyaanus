@@ -47,16 +47,19 @@ class HybridAgent(ToolAgent):
     
     def add_specialized_agent(self, role: str, config: dict) -> None:
         """
-        Создает и регистрирует специализированного агента для заданной роли.
+        Creates and registers a specialized agent for the given role.
         
         Args:
-            role: Роль агента (например, "researcher", "planner", "executor", "critic").
-            config: Конфигурация агента для данной роли.
+            role: The agent's role (e.g., "researcher", "planner", "executor", "critic").
+            config: The configuration for the agent. If it contains a 'name' key,
+                    that value will be used; otherwise, a default name will be generated.
         
-        Данный метод создает нового агента (на базе ToolAgent) с указанными настройками и сохраняет его в словаре specialized_agents.
+        This method creates a new agent (based on ToolAgent) with the specified settings,
+        ensuring that the 'name' parameter is passed only once.
         """
-        from anus.core.agent.tool_agent import ToolAgent  # Импортируем класс инструментарного агента
         agent_name = config.get("name", f"{role}-agent")
+        # Remove 'name' from config to avoid duplicate assignment.
+        config.pop("name", None)
         specialized_agent = ToolAgent(name=agent_name, **config)
         self.specialized_agents[role] = specialized_agent
         logging.info(f"Added specialized agent for role '{role}' with name '{agent_name}'")
