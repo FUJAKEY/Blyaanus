@@ -18,7 +18,9 @@ class GeminiModel(BaseModel):
     provider: str = "gemini"
     model_name: str = "gemini-2.0-flash"
     api_key: Optional[str] = os.environ.get("GEMINI_API_KEY")
-    base_url: Optional[str] = None  # Если требуется указать нестандартный endpoint
+    base_url: Optional[str] = None  # Можно указать нестандартный endpoint, если требуется
+    temperature: float = 0.0
+    max_tokens: int = 4096
 
     async def ask(
         self, 
@@ -31,7 +33,7 @@ class GeminiModel(BaseModel):
         
         Для обеспечения асинхронности оборачиваем синхронный вызов в asyncio.
         """
-        # Формируем текст запроса: объединяем системное сообщение и сообщения пользователя
+        # Формируем текст запроса: объединяем системное сообщение и остальные сообщения
         prompt = ""
         if system_message:
             prompt += system_message + "\n"
@@ -44,7 +46,7 @@ class GeminiModel(BaseModel):
         # Инициализируем клиента Gemini
         client = genai.Client(api_key=self.api_key)
         
-        # Создаём конфигурацию для запроса
+        # Создаем конфигурацию для запроса
         config = types.GenerateContentConfig(
             system_instruction=system_message or ""
         )
@@ -72,7 +74,7 @@ class GeminiModel(BaseModel):
         **kwargs
     ) -> ModelResponse:
         """
-        Gemini API не поддерживает вызов функций (tool calling) «из коробки».
-        Поэтому переиспользуем метод ask.
+        Gemini API не поддерживает вызовы функций (tool calling) «из коробки».
+        Поэтому используем тот же метод ask.
         """
         return await self.ask(messages, system_message=system_message, **kwargs)
