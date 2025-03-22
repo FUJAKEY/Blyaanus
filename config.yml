@@ -1,13 +1,12 @@
-# ANUS Configuration File
-
 model:
-  provider: openai
-  name: gpt-4
-  api_key: "${OPENAI_API_KEY}"  # Uses the environment variable you set
+  provider: gemini
+  name: gemini-2.0-flash
+  api_key: "${GEMINI_API_KEY}"  # Использование переменной окружения для GEMINI_API_KEY
+  temperature: 0.0
 
 agent:
   name: anus
-  mode: auto  # Changed from multi to auto
+  mode: auto  # Может быть auto, single или multi
   max_iterations: 10
   memory_capacity: 2000
   verbose: true
@@ -21,4 +20,4 @@ tools:
 
 logging:
   level: DEBUG
-  file: logs/anus.log 
+  file: logs/anus.log
