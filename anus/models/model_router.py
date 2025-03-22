@@ -3,7 +3,7 @@ import logging
 
 from anus.models.base.base_model import BaseModel
 from anus.models.openai_model import OpenAIModel
-from anus.models.gemini_model import GeminiModel  # Добавлен импорт GeminiModel
+from anus.models.gemini_model import GeminiModel  # Добавляем поддержку Gemini
 
 class ModelRouter:
     """
@@ -14,7 +14,7 @@ class ModelRouter:
         self.models: Dict[str, BaseModel] = {}
         self.model_classes: Dict[str, Type[BaseModel]] = {
             "openai": OpenAIModel,
-            "gemini": GeminiModel,  # Поддержка Gemini
+            "gemini": GeminiModel  # Поддержка Gemini
         }
         self.default_model_config = default_model_config or {
             "provider": "openai",
