@@ -1,12 +1,12 @@
 model:
   provider: gemini
   name: gemini-2.0-flash
-  api_key: "${GEMINI_API_KEY}"  # Использование переменной окружения для GEMINI_API_KEY
+  api_key: "${GEMINI_API_KEY}"
   temperature: 0.0
 
 agent:
   name: anus
-  mode: auto  # Может быть auto, single или multi
+  mode: auto
   max_iterations: 10
   memory_capacity: 2000
   verbose: true
